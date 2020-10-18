@@ -15,9 +15,9 @@
     error records and include the additional data in the 
     ...VAERSVAX.csv files. 
 
-    For best performance run CPU 4+ core 2.5GHz+, 8GB+ RAM, 3GB Disk
+    For best performance run CPU 4+ core 2.5GHz+, 4GB+ RAM, 3GB Disk
     Should run OK on slower hardware, but time will greatly increase.
-    Run time is approximately 5 hours on the hardware mentioned above.
+    Run time is approximately 6 hours on the hardware mentioned above.
     
     This code is open source and licensed under the GNU GPL v3 at:
     https://www.gnu.org/licenses/gpl-3.0.en.html.
@@ -30,13 +30,15 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from multiprocessing import Process
+from multiprocessing import Pool
+from functools import partial
 
 '''
 Get the List of all files in the directory tree 
 Optional: start and end year to get files prefixed with those years
 Optional: file name suffix to get one of the three file types (eg. VAERSVAX.csv)
 '''
-def getListOfFiles(dirName, startYear, endYear, fileNameSuffix):
+def getListOfFiles(dirName, startYear, endYear, fileNameSuffix, nonDomestic):
     listOfFile = os.listdir(dirName)
     allFiles = list()
 
@@ -47,7 +49,7 @@ def getListOfFiles(dirName, startYear, endYear, fileNameSuffix):
 
             # If entry is a directory then get the list of files in this directory 
             if os.path.isdir(fullPath):
-                allFiles = allFiles + getListOfFiles(fullPath, None, None, None)
+                allFiles = allFiles + getListOfFiles(fullPath, None, None, None, nonDomestic)
             else:
                 allFiles.append(fullPath)
 
@@ -68,16 +70,16 @@ def getListOfFiles(dirName, startYear, endYear, fileNameSuffix):
                 allFiles.append(filesToAppend)
             currYear = currYear + 1
 
-        filesToAppend = []
-        dataFile = dirName + 'NonDomesticVAERSDATA.csv'
-        filesToAppend = addFileIfExists(dataFile, filesToAppend)
-        symptomFile = dirName + 'NonDomesticVAERSSYMPTOMS.csv'
-        filesToAppend = addFileIfExists(symptomFile, filesToAppend)
-        vaxFile = dirName + 'NonDomesticVAERSVAX.csv'
-        filesToAppend = addFileIfExists(vaxFile, filesToAppend)
+        if nonDomestic == True:
+            dataFile = dirName + 'NonDomesticVAERSDATA.csv'
+            filesToAppend = addFileIfExists(dataFile, filesToAppend)
+            symptomFile = dirName + 'NonDomesticVAERSSYMPTOMS.csv'
+            filesToAppend = addFileIfExists(symptomFile, filesToAppend)
+            vaxFile = dirName + 'NonDomesticVAERSVAX.csv'
+            filesToAppend = addFileIfExists(vaxFile, filesToAppend)
 
-        if len(filesToAppend) > 0:
-            allFiles.append(filesToAppend)
+            if len(filesToAppend) > 0:
+                allFiles.append(filesToAppend)
 
     # fileNameSuffix portion
     if fileNameSuffix != None:
@@ -91,9 +93,9 @@ def getListOfFiles(dirName, startYear, endYear, fileNameSuffix):
             vaxFile = dirName + str(currYear) + fileNameSuffix
             allFiles = addFileIfExists(vaxFile, allFiles)
             currYear = currYear + 1
-
-        vaxFile = dirName + 'NonDomestic' + fileNameSuffix
-        allFiles = addFileIfExists(vaxFile, allFiles)
+        if nonDomestic == True:
+            vaxFile = dirName + 'NonDomestic' + fileNameSuffix
+            allFiles = addFileIfExists(vaxFile, allFiles)
                 
     return allFiles   
 
@@ -145,20 +147,28 @@ def combineFiles(inFiles, outDir):
             #os.remove(file)
 
         #Combine all files with same columns - do this from data frame above        
-        dataFrame.set_index("VAERS_ID", inplace=True)
+        dataFrame.set_index('VAERS_ID', inplace=True)
         dataFrame.to_csv(outDir + prefix[2] + 'VAERS.csv')
 
 # Combine all the clean files - creates a file with the total VAERS data 
 def appendFiles(inFiles, outDir):
     totalDataFrame = pd.DataFrame()
+    firstFile = True
 
     for file in inFiles:
         print('appending ' + file)
         df = pd.read_csv(file, engine='python', error_bad_lines=False) #drop records with errors
-        totalDataFrame.append(df)
 
+        if(firstFile):
+            totalDataFrame = df
+            firstFile = False
+        else:            
+            totalDataFrame.append(df)
+
+    totalDataFrame.set_index("VAERS_ID", inplace=True)
     totalDataFrame.to_csv(outDir + 'TotalVAERSData.csv')
-
+'''
+old way to do it just keeping vax type - much faster
 #Combine multiple vaccination names from the same VAERS_ID to create a single record
 def combineVaxRecords(file):
     print('processing ' + file)
@@ -169,6 +179,73 @@ def combineVaxRecords(file):
     df = df[['VAERS_ID','VAX_TYPE']]
     df.set_index("VAERS_ID", inplace=True)
     df.to_csv(file)
+'''
+#Combine multiple vaccination names from the same VAERS_ID to create a single record
+def combineVaxRecords(file):
+    print('processing ' + file)
+    headers = ['VAERS_ID', 'VAX_TYPE_1', 'VAX_MANU_1', 'VAX_LOT_1', 'VAX_DOSE_SERIES_1','VAX_ROUTE_1', 'VAX_SITE_1', 'VAX_NAME_1',
+               'VAX_TYPE_2', 'VAX_MANU_2', 'VAX_LOT_2', 'VAX_DOSE_SERIES_2','VAX_ROUTE_2', 'VAX_SITE_2', 'VAX_NAME_2',
+               'VAX_TYPE_3', 'VAX_MANU_3', 'VAX_LOT_3', 'VAX_DOSE_SERIES_3','VAX_ROUTE_3', 'VAX_SITE_3', 'VAX_NAME_3',
+               'VAX_TYPE_4', 'VAX_MANU_4', 'VAX_LOT_4', 'VAX_DOSE_SERIES_4','VAX_ROUTE_4', 'VAX_SITE_4', 'VAX_NAME_4',
+               'VAX_TYPE_5', 'VAX_MANU_5', 'VAX_LOT_5', 'VAX_DOSE_SERIES_5','VAX_ROUTE_5', 'VAX_SITE_5', 'VAX_NAME_5',
+               'VAX_TYPE_6', 'VAX_MANU_6', 'VAX_LOT_6', 'VAX_DOSE_SERIES_6','VAX_ROUTE_6', 'VAX_SITE_6', 'VAX_NAME_6']
+
+    dfOut = pd.DataFrame(columns=headers)
+    df = pd.read_csv(file, engine='python', error_bad_lines=False) #drop records with errors  
+          
+    # get a unique list of the IDs
+    idList = list(df['VAERS_ID'])
+    idList = list(dict.fromkeys(idList))
+
+    inRows = pd.DataFrame()    
+    # for each record, write the row if it's the only one found for that ID. Otherwise combine the rows
+    for record in idList:
+        outRow = pd.DataFrame(columns=headers)
+        inRows = df.loc[df['VAERS_ID'] == record] 
+        inRows.set_index("VAERS_ID", inplace=True)
+        count = 1
+        for index, row in inRows.iterrows(): 
+            if count == 1:
+                outRow.at[record,'VAERS_ID'] = record
+                outRow.at[record,'VAX_TYPE_1'] = inRows.iat[0,0]
+                outRow.at[record,'VAX_MANU_1'] = inRows.iat[0,1]
+                outRow.at[record,'VAX_LOT_1'] = inRows.iat[0,2]
+                outRow.at[record,'VAX_DOSE_SERIES_1'] = inRows.iat[0,3]
+                outRow.at[record,'VAX_ROUTE_1'] = inRows.iat[0,4]
+                outRow.at[record,'VAX_SITE_1'] = inRows.iat[0,5]
+                outRow.at[record,'VAX_NAME_1'] = inRows.iat[0,6]
+                dfOut = dfOut.append(outRow)
+            else:
+                if count > 6:
+                    print('error - more than 6 vaccines for this id ' + str(record))
+                else:
+                    # map the current record to the combined record
+                    strCount = str(count)
+                    vaxType = 'VAX_TYPE_' + strCount
+                    vaxMenu = 'VAX_MANU_' + strCount
+                    vaxLot = 'VAX_LOT_' + strCount
+                    vaxSeries = 'VAX_DOSE_SERIES_' + strCount
+                    vaxRoute = 'VAX_ROUTE_' + strCount
+                    vaxSite = 'VAX_SITE_' + strCount 
+                    vaxName = 'VAX_NAME_' + strCount
+
+                    countIndex = count - 1
+                    location = 0
+
+                    # combine the data for record to be writen to the new file
+                    dfOut.at[record,vaxType] = inRows.iat[countIndex,location]
+                    dfOut.at[record,vaxMenu] = inRows.iat[countIndex,location+1]
+                    dfOut.at[record,vaxLot] = inRows.iat[countIndex,location+2]
+                    dfOut.at[record,vaxSeries] = inRows.iat[countIndex,location+3]
+                    dfOut.at[record,vaxRoute] = inRows.iat[countIndex,location+4]
+                    dfOut.at[record,vaxSite] = inRows.iat[countIndex,location+5]
+                    dfOut.at[record,vaxName] = inRows.iat[countIndex,location+6]
+            
+            count += 1                
+            
+    #change to new dataframe   
+    dfOut.set_index("VAERS_ID", inplace=True)
+    dfOut.to_csv(file)
 
 # Need to combine symptoms from multiple entries to a single entry. Supports 25 symptoms
 def combineSymptoms(file):
@@ -204,35 +281,54 @@ def combineSymptoms(file):
     
     print('processing ' + file)
     df = pd.read_csv(file, engine='python', error_bad_lines=False) #drop records with errors
-    dfOut = pd.DataFrame()
     # get a unique list of the IDs
     idList = list(df['VAERS_ID'])
     idList = list(dict.fromkeys(idList))
     # add the new headers to support 25 symptoms per record
     newColumns = df.columns.values  
     newColumns = np.append(newColumns,additionalHeaders)      
-    dfOut = pd.concat([dfOut,pd.DataFrame(columns=newColumns)])
+    dfOut = pd.DataFrame(columns=newColumns)
+    outRow = pd.DataFrame(columns=newColumns)
     inRows = pd.DataFrame()
     # for each record, write the row if it's the only one found for that ID. Otherwise combine the rows
     for record in idList:
-        inRows = df.loc[df['VAERS_ID'] == record] 
-        count = 0
+        inRows = df.loc[df['VAERS_ID'] == record]         
+        inRows.set_index("VAERS_ID", inplace=True)
+        count = 0  
+        outRow = pd.DataFrame(columns=newColumns) 
+        outRow.set_index("VAERS_ID", inplace=True)     
         for index, row in inRows.iterrows(): 
             if count == 0:
-                outRow = row
+                outRow.at[record,'VAERS_ID'] = record
+                outRow.at[record,'SYMPTOM1'] = inRows.iat[0,0]
+                outRow.at[record,'SYMPTOMVERSION1'] = inRows.iat[0,1]
+                outRow.at[record,'SYMPTOM2'] = inRows.iat[0,2]
+                outRow.at[record,'SYMPTOMVERSION2'] = inRows.iat[0,3]
+                outRow.at[record,'SYMPTOM3'] = inRows.iat[0,4]
+                outRow.at[record,'SYMPTOMVERSION3'] = inRows.iat[0,5]
+                outRow.at[record,'SYMPTOM4'] = inRows.iat[0,6]                
+                outRow.at[record,'SYMPTOMVERSION4'] = inRows.iat[0,7]
+                outRow.at[record,'SYMPTOM5'] = inRows.iat[0,8]                
+                outRow.at[record,'SYMPTOMVERSION5'] = inRows.iat[0,9]
             else:
                 if count == 1:
                     headerRange = range(6,10)
+                    startIndex = 6
                 elif count == 2:
                     headerRange = range(11,15)
+                    startIndex = 11
                 elif count == 3:
                     headerRange = range(16,20)
+                    startIndex = 16
                 elif count == 4:
                     headerRange = range(21,25)
+                    startIndex = 21
                 elif count == 5:
                     headerRange = range(26,30)
+                    startIndex = 26
                 elif count == 6:
                     headerRange = range(31,35)
+                    startIndex = 31
                 else:
                     print('error - more than 35 symptoms for this id ' + str(record))
 
@@ -240,24 +336,28 @@ def combineSymptoms(file):
                 for i in headerRange:
                     symptomHeader = 'SYMPTOM' + str(i)
                     versionHeader = 'SYMPTOMVERSION' + str(i)
-                    # get the indices to map it to
-                    versionLocation = headerRange.index(i)
-                    if versionLocation == 0:
-                        versionLocation = 2
-                    else:
-                        versionLocation = versionLocation *2
-                    symptomLocation = versionLocation - 1
-                    # combine the data for record to be writen to the new file
-                    outRow[symptomHeader] = inRows.iat[count,symptomLocation]
-                    outRow[versionHeader] = inRows.iat[count,versionLocation]
 
-        #write the outRow to new df here
-        dfOut = dfOut.append(outRow) 
-        count += 1                
-            
+                    # get the indices to map it to
+                    if i == startIndex:
+                        symptomLocation = 0
+                        versionLocation = 1
+
+                    # combine the data for record to be writen to the new file
+                    newSymptom = inRows.iat[count,symptomLocation]
+                    newVersion = inRows.iat[count,versionLocation]                 
+                    outRow.at[record,symptomHeader] = newSymptom
+                    outRow.at[record,versionHeader] = newVersion
+                    
+                    symptomLocation += 2
+                    versionLocation += 2
+
+            count += 1 
+
+        dfOut.append(outRow) 
+
     #change to new dataframe   
     dfOut.set_index("VAERS_ID", inplace=True)
-    dfOut.to_csv(file)
+    dfOut.to_csv(file) #TODO file is empty, so are total files
 
 # Take a file path and list, add the file to the list if it exists, return the list
 def addFileIfExists(thePath, fileList):
@@ -272,63 +372,52 @@ def main():
     origDirName = 'E:/Desktop/Vaccine2/Data'
     cleanDirName = 'E:/Desktop/Vaccine2/CleanData/'
     outputDirName = 'E:/Desktop/Vaccine2/TotalCleanData/'
-    beginYear = 1990
-    stopYear = 2020
-    
+    beginYear = 1991
+    stopYear = 1991
+    nonDomestic = False
+
+    print("Starting at " + datetime.now().strftime('%H:%M:%S'))
+    '''  
     # Get the list of all original files
-    listOfFiles = getListOfFiles(origDirName, None, None, None)
+    listOfFiles = getListOfFiles(origDirName, None, None, None, nonDomestic)
     
     # Get the list of all files in directory tree at given path
     listOfFiles = list()
     for (dirpath, dirnames, filenames) in os.walk(origDirName):
         listOfFiles += [os.path.join(dirpath, file) for file in filenames]
        
-    # Create clean copies of the files  
-    processes = list() 
-    count = 0
-    for elem in listOfFiles:
-        processes.append(Process(target=scrubFile, args=(elem, cleanDirName)))
-        processes[count].start()        
-        count += 1
-    
-    for p in processes:
-        p.join()
-
+    # Create clean copies of the files 
+    pool = Pool()
+    scrubFile1=partial(scrubFile, outDir=cleanDirName)
+    pool.map(scrubFile1, listOfFiles)         
+    pool.close()
+          
     # Combine the records of the Vax file to remove duplicates 
-    # (drops Vax info other than VAX_TYPE and VAERS_ID)
-    vaxProcesses = list()
-    vaxFiles = list()
-    vaxCount = 0
-    vaxFiles = getListOfFiles(cleanDirName, beginYear, stopYear, 'VAERSVAX.csv') 
-
-    for elem in vaxFiles:
-        vaxProcesses.append(Process(target=combineVaxRecords, args=(elem,)))    
-        vaxProcesses[vaxCount].start()
-        vaxCount += 1
-    
-    for p in vaxProcesses:
-        p.join()
-
+    # (drops Vax info other than VAX_TYPE and VAERS_ID)  
+    print("Starting vax files at " + datetime.now().strftime('%H:%M:%S'))
+    vaxFiles = getListOfFiles(cleanDirName, beginYear, stopYear, 'VAERSVAX.csv', nonDomestic) 
+    pool2 = Pool()
+    pool2.map(combineVaxRecords, vaxFiles, chunksize=1)  
+    pool2.close()
+    '''
     # Combine the symptom records so they are all on one line
-    symptomFiles = list()
-    symptomProcesses = list()
-    symptomCount = 0
-    symptomFiles = getListOfFiles(cleanDirName, beginYear, stopYear, 'VAERSSYMPTOMS.csv')
-    for elem in symptomFiles:
-        symptomProcesses.append(Process(target=combineSymptoms, args=(elem,)))
-        symptomProcesses[symptomCount].start()
-        symptomCount += 1
-
-    for p in symptomProcesses:
-        p.join()
-
+    print("Starting symptom files at " + datetime.now().strftime('%H:%M:%S'))
+    symptomFiles = getListOfFiles(cleanDirName, beginYear, stopYear, 'VAERSSYMPTOMS.csv', nonDomestic)
+    pool1 = Pool()
+    pool1.map(combineSymptoms, symptomFiles, chunksize=1)         
+    pool1.close()
+    
     # Combine the three yearly files into one
-    listOfFiles = getListOfFiles(cleanDirName, beginYear, stopYear, None)
+    print("Combining files at " + datetime.now().strftime('%H:%M:%S'))
+    listOfFiles = getListOfFiles(cleanDirName, beginYear, stopYear, None, nonDomestic)
     combineFiles(listOfFiles, outputDirName)
-
+    
     # Append all the files to create one total VAERS file
-    listOfFiles = getListOfFiles(cleanDirName, None, None, None)
+    print("Appending files at " + datetime.now().strftime('%H:%M:%S'))
+    listOfFiles = getListOfFiles(outputDirName, None, None, None, nonDomestic)
     appendFiles(listOfFiles, outputDirName)
-       
+
+    print("Finished at " + datetime.now().strftime('%H:%M:%S'))
+      
 if __name__ == '__main__':
     main()
