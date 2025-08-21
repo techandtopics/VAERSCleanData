@@ -1,0 +1,6 @@
+VAERS_ID,SYMPTOM1,SYMPTOMVERSION1,SYMPTOM2,SYMPTOMVERSION2,SYMPTOM3,SYMPTOMVERSION3,SYMPTOM4,SYMPTOMVERSION4,SYMPTOM5,SYMPTOMVERSION5
+855017,Arthralgia,22.1,Chills,22.1,Injection site pain,22.1,Pyrexia,22.1,,
+855018,Chills,22.1,Fatigue,22.1,Hypertension,22.1,Hypoaesthesia,22.1,Injected limb mobility decreased,22.1
+855018,Muscular weakness,22.1,Pain in extremity,22.1,Pyrexia,22.1,Tremor,22.1,Vertigo,22.1
+855019,Pain,22.1,Pruritus,22.1,Rash,22.1,,,,
+855020,Chills,22.1,Influenza like illness,22.1,Myalgia,22.1,Pain in extremity,22.1,Pyrexia,22.1

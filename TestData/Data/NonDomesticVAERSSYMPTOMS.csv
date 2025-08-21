@@ -1,0 +1,19 @@
+VAERS_ID,SYMPTOM1,SYMPTOMVERSION1,SYMPTOM2,SYMPTOMVERSION2,SYMPTOM3,SYMPTOMVERSION3,SYMPTOM4,SYMPTOMVERSION4,SYMPTOM5,SYMPTOMVERSION5
+874013,Injection site erythema,23,Injection site swelling,23,Type III immune complex mediated reaction,23,,,,
+875102,Acidosis,23,Acute kidney injury,23,Alanine aminotransferase normal,23,Base excess decreased,23,Basophil count decreased,23
+875102,Blood albumin normal,23,Blood alkaline phosphatase increased,23,Blood bicarbonate decreased,23,Blood bilirubin normal,23,Blood chloride increased,23
+875102,Blood creatinine increased,23,Blood glucose normal,23,Blood lactic acid normal,23,Blood methaemoglobin present,23,Blood pH decreased,23
+875102,Blood potassium increased,23,Blood sodium normal,23,Blood urea increased,23,Calcium ionised normal,23,Carboxyhaemoglobin normal,23
+875102,Chest discomfort,23,Condition aggravated,23,Death,23,Dehydration,23,Diabetes mellitus,23
+875102,Dyspnoea exertional,23,Electrocardiogram T wave abnormal,23,Eosinophil count normal,23,Fluid overload,23,Fraction of inspired oxygen,23
+875102,Gamma-glutamyltransferase normal,23,Globulins decreased,23,Haematocrit decreased,23,Haemoglobin decreased,23,Heart rate increased,23
+875102,Hypersensitivity,23,Influenza like illness,23,Intensive care,23,Ischaemia,23,Lethargy,23
+875102,Lipase increased,23,Lymphocyte count decreased,23,Mean cell haemoglobin concentration normal,23,Mean cell haemoglobin normal,23,Mean cell volume normal,23
+875102,Monocyte count increased,23,Neutrophil count increased,23,Oedema,23,Oxygen saturation decreased,23,PCO2 decreased,23
+875102,PO2 decreased,23,Platelet count normal,23,Protein total normal,23,Red blood cell count decreased,23,Renal cyst,23
+875102,Renal impairment,23,Rhinitis,23,Tachypnoea,23,Tubulointerstitial nephritis,23,Urinary tract infection,23
+875102,Viral infection,23,White blood cell count increased,23,,,,,,
+876031,Asthenia,23,Blood count,23,Computerised tomogram,23,Discomfort,23,Dizziness,23
+876031,Dyspnoea,23,Fatigue,23,Feeling abnormal,23,Hangover,23,Hypersensitivity,23
+876031,Malaise,23,Pain,23,Rash erythematous,23,Skin discolouration,23,Skin lesion,23
+876031,Weight decreased,23,,,,,,,,
